@@ -1,0 +1,72 @@
+export const ROLES = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  ADMIN: 'ADMIN',
+  BRANCH_MANAGER: 'BRANCH_MANAGER',
+  CLINICIAN: 'CLINICIAN',
+  NURSE: 'NURSE',
+  DISPENSER: 'DISPENSER',
+  CASHIER: 'CASHIER',
+  STOREKEEPER: 'STOREKEEPER',
+  LAB: 'LAB',
+  VIEWER: 'VIEWER'
+};
+
+export const PERMS = {
+  SUPER_ADMIN: ['*'],
+  ADMIN: [
+    'dashboard.view','branches.view','staff.view','staff.edit','clients.view','clients.edit',
+    'clinical.view','clinical.edit','pharmacy.view','pharmacy.sell','dispense',
+    'inventory.view','inventory.edit','stock.receive','stock.transfer','stock.count','stock.adjust',
+    'suppliers.view','suppliers.edit','purchases.view','purchases.edit','laboratory.view','laboratory.edit',
+    'sales.view','sales.refund','payments.view','payments.create','expenses.view','expenses.create',
+    'ledger.view','cash.close','reports.view','reports.clinical','audit.view','notifications.view',
+    'settings.view','settings.edit','export.data'
+  ],
+  BRANCH_MANAGER: [
+    'dashboard.view','staff.view','clients.view','clients.edit','clinical.view',
+    'pharmacy.view','pharmacy.sell','dispense','inventory.view','inventory.edit',
+    'stock.receive','stock.transfer','stock.count','stock.adjust',
+    'suppliers.view','suppliers.edit','purchases.view','purchases.edit','laboratory.view','laboratory.edit',
+    'sales.view','sales.refund','payments.view','payments.create','expenses.view','expenses.create',
+    'ledger.view','cash.close','reports.view','notifications.view','export.data'
+  ],
+  CLINICIAN: [
+    'dashboard.view','clients.view','clients.edit','clinical.view','clinical.edit',
+    'pharmacy.view','inventory.view','laboratory.view','laboratory.edit','reports.clinical'
+  ],
+  NURSE: [
+    'dashboard.view','clients.view','clinical.view','clinical.edit','inventory.view','laboratory.view'
+  ],
+  DISPENSER: [
+    'dashboard.view','clients.view','pharmacy.view','pharmacy.sell','dispense','inventory.view','stock.count'
+  ],
+  CASHIER: [
+    'dashboard.view','clients.view','sales.view','payments.view','payments.create','ledger.view','cash.close'
+  ],
+  STOREKEEPER: [
+    'dashboard.view','inventory.view','inventory.edit','stock.receive','stock.transfer','stock.count','stock.adjust',
+    'suppliers.view','suppliers.edit','purchases.view','purchases.edit'
+  ],
+  LAB: [
+    'dashboard.view','clients.view','laboratory.view','laboratory.edit','inventory.view'
+  ],
+  VIEWER: ['dashboard.view']
+};
+
+export function can(user, perm) {
+  if (!user) return false;
+  const list = PERMS[user.role] || [];
+  if (list.includes('*')) return true;
+  return list.includes(perm);
+}
+
+export function isBranchScoped(user) {
+  if (!user) return true;
+  return user.role !== ROLES.SUPER_ADMIN && user.role !== ROLES.ADMIN;
+}
+
+export function canAccessBranch(user, branchId) {
+  if (!user) return false;
+  if (!isBranchScoped(user)) return true;
+  return user.branchId === branchId;
+}
