@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16359B">
+<title>Sign in · BIGZA Clinics</title>
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+</head>
+<body class="auth-body">
+
+<div class="auth-wrap">
+  <section class="auth-brand">
+    <div class="auth-brand__inner">
+      <div class="brand-mark brand-mark--lg">BZ</div>
+      <h1>BIGZA CLINICS</h1>
+      <p class="auth-tag">Your Health Is Our Priority</p>
+      <p class="auth-sub">Professional Healthcare. Right at Your Doorstep and Clinic.</p>
+      <ul class="auth-points">
+        <li>Multi-branch clinic operations</li>
+        <li>Pharmacy, inventory &amp; batch tracking</li>
+        <li>Financial ledger &amp; audit trail</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="auth-panel">
+    <form id="login-form" class="auth-form" novalidate>
+      <h2>Sign in</h2>
+      <p class="muted">Use your BIGZA Clinics staff account.</p>
+
+      <div id="login-alert" class="alert alert--error" hidden></div>
+
+      <label class="field">
+        <span>Email address</span>
+        <input type="email" id="email" autocomplete="username" required placeholder="you@bigzaclinics.com">
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
+      </label>
+
+      <div class="auth-row">
+        <label class="check"><input type="checkbox" id="show-pw"> <span>Show password</span></label>
+        <button type="button" class="link-btn" id="forgot">Forgot password?</button>
+      </div>
+
+      <button class="btn btn--primary btn--block" id="submit" type="submit">Sign in</button>
+
+      <p class="muted small auth-foot">
+        Access is restricted to authorised staff. All activity is logged.
+      </p>
+    </form>
+  </section>
+</div>
+
+<div id="toasts" class="toasts"></div>
+<div id="modal-root"></div>
+
+<script type="module">
+import { auth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, doc, getDoc, db } from './js/firebase.js';
+import { toast, qs } from './js/utils.js';
+
+const form = qs('#login-form');
+const alertBox = qs('#login-alert');
+const submitBtn = qs('#submit');
+
+onAuthStateChanged(auth, u => { if (u) location.replace('dashboard.html'); });
+
+qs('#show-pw').addEventListener('change', e => {
+  qs('#password').type = e.target.checked ? 'text' : 'password';
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  alertBox.hidden = true;
+  const email = qs('#email').value.trim();
+  const password = qs('#password').value;
+  if (!email || !password) { show('Please enter both your email and password.'); return; }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in…';
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    const snap = await getDoc(doc(db, 'users', cred.user.uid));
+    if (snap.exists() && snap.data().active === false) {
+      await auth.signOut();
+      show('Your account has been deactivated. Please contact your administrator.');
+      return;
+    }
+    location.replace('dashboard.html');
+  } catch (err) {
+    show(friendly(err));
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign in';
+  }
+});
+
+qs('#forgot').addEventListener('click', async () => {
+  const email = qs('#email').value.trim();
+  if (!email) { show('Enter your email address first, then tap "Forgot password".'); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    toast('Password reset email sent. Check your inbox.', 'success');
+  } catch (err) { show(friendly(err)); }
+});
+
+function show(msg) { alertBox.textContent = msg; alertBox.hidden = false; }
+
+function friendly(err) {
+  const code = err?.code || '';
+  if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found'))
+    return 'Incorrect email or password.';
+  if (code.includes('too-many-requests')) return 'Too many attempts. Please wait a moment and try again.';
+  if (code.includes('network')) return 'Network problem. Check your internet connection.';
+  if (code.includes('invalid-email')) return 'That email address is not valid.';
+  return 'Unable to sign in right now. Please try again.';
+}
+</script>
+</body>
+</html>
